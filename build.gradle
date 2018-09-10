@@ -1,0 +1,95 @@
+buildscript {
+
+	repositories {
+		mavenLocal()
+		jcenter()
+        maven {
+            url 'https://dl.bintray.com/kotlin/kotlin-dev/'
+        }
+	}
+	dependencies {
+		classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.3-SNAPSHOT'
+	}
+}
+
+apply plugin: 'kotlin-multiplatform'
+apply plugin: 'maven-publish'
+
+group = 'org.tetris'
+version = '1.0'
+
+repositories {
+    mavenLocal()
+    jcenter()
+    maven {
+        url 'https://dl.bintray.com/kotlin/kotlin-dev/'
+    }
+}
+
+
+publishing {
+    repositories {
+        maven {
+            url = '../repo'
+        }
+    }
+}
+
+kotlin {
+    targets {
+        fromPreset(presets.macosX64, 'macos') {
+            compilations.main {
+                cinterops {
+                    sdl {
+                        includeDirs '/Library/Frameworks/SDL2.framework/Headers',
+                                "${System.getProperty("user.home")}/Library/Frameworks/SDL2.framework/Headers",
+                                '/opt/local/include/SDL2',
+                                '/usr/local/include/SDL2'
+                    }
+                }
+            }
+            compilations.all {
+                linkerOpts "-F ${System.getProperty("user.home")}/Library/Frameworks -F /Library/Frameworks -framework SDL2"
+            }
+        }
+        fromPreset(presets.linuxX64, 'linux') {
+            compilations.main {
+                cinterops {
+                    sdl {
+                        includeDirs '/usr/include/SDL2'
+                    }
+                }
+            }
+            compilations.all {
+                linkerOpts '-L/usr/lib64 -L/usr/lib/x86_64-linux-gnu -lSDL2'
+            }
+        }
+        fromPreset(presets.mingwX64, 'windows') {
+            compilations.main {
+                cinterops{
+                    sdl {
+                        includeDirs "${System.getenv("MINGW64_DIR") ?: "c:/msys64/mingw64"}/include/SDL2"
+                    }
+                }
+            }
+            compilations.all {
+                linkerOpts "-L${System.getenv("MINGW64_DIR") ?: "c:/msys64/mingw64"}/lib -Wl,-Bstatic -lstdc++ -static -lSDL2 -limm32 -lole32 -loleaut32 -lversion -lwinmm -mwindows"
+            }
+        }
+
+
+        configure([macos, linux, windows]) {
+            compilations.main {
+                outputKinds = [EXECUTABLE]
+            }
+        }
+
+    }
+
+    sourceSets {
+        allNative {}
+        macosMain { dependsOn sourceSets.allNative }
+        linuxMain { dependsOn sourceSets.allNative }
+        windowsMain { dependsOn sourceSets.allNative }
+    }
+}
